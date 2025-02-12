@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build packages
+    runs-on: ubuntu-latest
+    env:
+      GO_VERSION: 1.24.0
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Build
+      run: |
+        echo "date=$(date '+%Y%m%d')" >> $GITHUB_ENV
+        bash build.sh
+
+    - name: Create release
+      continue-on-error: true
+      uses: ncipollo/release-action@v1.14.0
+      with:
+        name: ${{ env.date }}
+        allowUpdates: true
+        tag: ${{ env.date }}
+        commit: main
+        replacesArtifacts: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+        artifacts: "build/neko-status*"
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@main
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: 0
+        keep_minimum_runs: 2
